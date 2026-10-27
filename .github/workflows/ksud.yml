@@ -55,18 +55,6 @@ jobs:
         targets: ${{ inputs.target }}
         components: rust-src
 
-    - name: Get Nightly Version
-      id: rust-version
-      run: echo "version=$(rustc -V)" >> $GITHUB_OUTPUT
-
-    - name: Cache Rust build dependencies
-      uses: Swatinem/rust-cache@v2
-      if: ${{ inputs.use_cache && github.event_name != 'pull_request' }}
-      with:
-        prefix-key: ksud-${{ inputs.target }}-${{ steps.rust-version.outputs.version }}
-        workspaces: userspace/ksud
-        cache-targets: true
-
     - name: Setup cargo-ndk
       run: cargo install cargo-ndk --locked
 
