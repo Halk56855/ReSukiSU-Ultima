@@ -53,7 +53,7 @@ jobs:
       with:
         toolchain: nightly
         targets: ${{ inputs.target }}
-        components: rust-src
+        # components: rust-src لم تعد حاجة ماسة لها هنا
 
     - name: Setup cargo-ndk
       run: cargo install cargo-ndk --locked
@@ -65,12 +65,13 @@ jobs:
 
     - name: Build ksud
       run: |
-        # Point ANDROID_NDK_HOME to the runner's preinstalled NDK root
+        # توجيه المتغير إلى مسار NDK المثبت مسبقاً في الـ Runner
         export ANDROID_NDK_HOME="${ANDROID_NDK_ROOT}"
         echo "Using Android NDK at: $ANDROID_NDK_HOME"
         
         cd userspace/ksud/
-        cargo ndk b -t ${{ inputs.target }} -r -Z build-std=std,core,panic_abort -Z build-std-features="optimize_for_size" -Z trim-paths
+        # تم إزالة -Z build-std لتجنب تضارب المكتبة القياسية
+        cargo ndk b -t ${{ inputs.target }} -r -Z trim-paths
 
     - name: Upload ksud artifact
       uses: actions/upload-artifact@v4
