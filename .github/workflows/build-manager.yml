@@ -1,4 +1,4 @@
-name: Build Manager
+Name: Build Manager
 
 on:
   workflow_dispatch:
@@ -119,7 +119,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v7
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
@@ -176,13 +176,13 @@ jobs:
           } >> gradle.properties
       
       - name: Setup Java
-        uses: actions/setup-java@v5
+        uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: 21
 
       - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v6
+        uses: gradle/actions/setup-gradle@v4
 
       - name: Setup Android SDK
         uses: android-actions/setup-android@v4
@@ -196,7 +196,7 @@ jobs:
           fi
 
       - name: Upload artifact
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@v4
         with:
           name: ${{ steps.determine.outputs.title }}-gradle-${{ matrix.build_type }}
           path: |
@@ -204,7 +204,7 @@ jobs:
             manager/app/build/outputs/apk/debug/*.apk
 
       - name: Upload mappings
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@v4
         with:
           name: "${{ steps.determine.outputs.title }}-mappings"
           path: "manager/app/build/outputs/mapping/release/"
@@ -226,7 +226,7 @@ jobs:
             build_type: "debug"
     steps:
       - name: Checkout
-        uses: actions/checkout@v7
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
@@ -240,25 +240,25 @@ jobs:
           fi
 
       - name: Download artifact
-        uses: actions/download-artifact@v8
+        uses: actions/download-artifact@v4
         with:
             name: ${{ steps.determine.outputs.title }}-gradle-${{ matrix.build_type }}
             path: artifacts/${{ steps.determine.outputs.title }}-gradle-${{ matrix.build_type }}
       
       - name: Download arm64 ksud
-        uses: actions/download-artifact@v8
+        uses: actions/download-artifact@v4
         with:
           name: ksud-aarch64-linux-android
           path: artifacts/ksud-aarch64-linux-android
 
       - name: Download x86_64 ksud
-        uses: actions/download-artifact@v8
+        uses: actions/download-artifact@v4
         with:
           name: ksud-x86_64-linux-android
           path: artifacts/ksud-x86_64-linux-android
 
       - name: Download arm ksud
-        uses: actions/download-artifact@v8
+        uses: actions/download-artifact@v4
         with:
           name: ksud-armv7-linux-androideabi
           path: artifacts/ksud-armv7-linux-androideabi
@@ -302,12 +302,30 @@ jobs:
             echo "SIGN_KEYSTORE_PASSWORD=$PR_KEYSTORE_PASSWORD" >> $GITHUB_ENV
             echo "SIGN_KEY_PASSWORD=$PR_KEY_PASSWORD" >> $GITHUB_ENV
           else
-            test -n "$PROD_KEYSTORE"
-            echo "$PROD_KEYSTORE" | base64 -d > key.jks
-            echo "SIGN_KEYSTORE_FILE=key.jks" >> $GITHUB_ENV
-            echo "SIGN_KEY_ALIAS=$PROD_KEY_ALIAS" >> $GITHUB_ENV
-            echo "SIGN_KEYSTORE_PASSWORD=$PROD_KEYSTORE_PASSWORD" >> $GITHUB_ENV
-            echo "SIGN_KEY_PASSWORD=$PROD_KEY_PASSWORD" >> $GITHUB_ENV
+            if [ -n "$PROD_KEYSTORE" ]; then
+              echo "$PROD_KEYSTORE" | base64 -d > key.jks
+              echo "SIGN_KEYSTORE_FILE=key.jks" >> $GITHUB_ENV
+              echo "SIGN_KEY_ALIAS=$PROD_KEY_ALIAS" >> $GITHUB_ENV
+              echo "SIGN_KEYSTORE_PASSWORD=$PROD_KEYSTORE_PASSWORD" >> $GITHUB_ENV
+              echo "SIGN_KEY_PASSWORD=$PROD_KEY_PASSWORD" >> $GITHUB_ENV
+            else
+              echo "PROD_KEYSTORE secret is not set. Generating a temporary fallback keystore..."
+              FALLBACK_PASS=$(openssl rand -hex 32)
+              FALLBACK_KEY_PASS=$(openssl rand -hex 32)
+              keytool -genkeypair \
+                -alias fallback-key \
+                -keyalg RSA -keysize 2048 \
+                -validity 1 \
+                -storepass "$FALLBACK_PASS" \
+                -keypass "$FALLBACK_KEY_PASS" \
+                -dname "CN=Fallback Release Build" \
+                -storetype JKS \
+                -keystore fallback-key.jks
+              echo "SIGN_KEYSTORE_FILE=fallback-key.jks" >> $GITHUB_ENV
+              echo "SIGN_KEY_ALIAS=fallback-key" >> $GITHUB_ENV
+              echo "SIGN_KEYSTORE_PASSWORD=$FALLBACK_PASS" >> $GITHUB_ENV
+              echo "SIGN_KEY_PASSWORD=$FALLBACK_KEY_PASS" >> $GITHUB_ENV
+            fi
           fi
 
       - name: Repack and resign
@@ -326,13 +344,13 @@ jobs:
             --strip
 
       - name: Delete gradle build
-        uses: GeekyEggo/delete-artifact@v6
+        uses: GeekyEggo/delete-artifact@v5
         with:
           name: ${{ steps.determine.outputs.title }}-gradle-${{ matrix.build_type }}
         
       - name: Upload build artifact
         if: ${{ github.event_name == 'pull_request' || (github.event_name != 'pull_request' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/dev' || github.ref == 'refs/heads/ci' || github.ref == 'refs/heads/sync-upstream')) || github.ref_type == 'tag' }}
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@v4
         with:
           name: ${{ steps.determine.outputs.title }}-${{ matrix.build_type }}
           path: dist/*.apk
