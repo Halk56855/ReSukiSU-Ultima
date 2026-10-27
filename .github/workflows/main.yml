@@ -4,6 +4,11 @@ on:
     tags:
       - "v*"
   workflow_dispatch:
+    inputs:
+      tag_name:
+        description: 'Tag name for the release (e.g., v4.1.0)'
+        required: true
+        type: string
 
 jobs:
   build-manager:
@@ -42,19 +47,24 @@ jobs:
 
       - name: Package kernel bundle (Fallback)
         run: |
+          # تحديد اسم الـ Tag بناءً على طريقة التشغيل (دفع Tag أو إدخال يدوي)
+          TARGET_TAG="${{ github.event.inputs.tag_name || github.ref_name }}"
+          echo "Using Tag: $TARGET_TAG"
+
           if [ -f "./scripts/package-release-kernel-bundle.sh" ]; then
-            ./scripts/package-release-kernel-bundle.sh . "ReSukiSU-Ultima_${GITHUB_REF_NAME}_kernel-bundle.zip"
+            ./scripts/package-release-kernel-bundle.sh . "ReSukiSU-Ultima_${TARGET_TAG}_kernel-bundle.zip"
           else
-            echo "Script not found, creating kernel bundle zip manually from downloaded artifacts..."
+            echo "Script not found, creating kernel bundle zip manually..."
             cd downloaded-artifacts
-            zip -r "../ReSukiSU-Ultima_${GITHUB_REF_NAME}_kernel-bundle.zip" . -i "*.ko" -i "ksud*" || true
+            zip -r "../ReSukiSU-Ultima_${TARGET_TAG}_kernel-bundle.zip" . -i "*.ko" -i "ksud*" || true
             cd ..
           fi
 
       - name: Release to GitHub
         uses: softprops/action-gh-release@v2
         with:
-          prerelease: ${{ contains(github.ref_name, '-') }}
+          tag_name: ${{ github.event.inputs.tag_name || github.ref_name }}
+          prerelease: ${{ contains(github.ref_name, '-') || (github.event_name == 'workflow_dispatch' && contains(github.event.inputs.tag_name, '-')) }}
           files: |
             downloaded-artifacts/*.apk
             ReSukiSU-Ultima_*_kernel-bundle.zip
