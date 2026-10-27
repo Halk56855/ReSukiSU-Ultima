@@ -63,7 +63,6 @@ jobs:
       uses: Swatinem/rust-cache@v2
       if: ${{ inputs.use_cache && github.event_name != 'pull_request' }}
       with:
-        # Include rustc version in prefix-key to prevent build-std cache collision
         prefix-key: ksud-${{ inputs.target }}-${{ steps.rust-version.outputs.version }}
         workspaces: userspace/ksud
         cache-targets: true
@@ -73,10 +72,12 @@ jobs:
 
     - name: Build ksud
       run: |
+        # Point ANDROID_NDK_HOME to the runner's preinstalled NDK root
+        export ANDROID_NDK_HOME="${ANDROID_NDK_ROOT}"
+        echo "Using Android NDK at: $ANDROID_NDK_HOME"
+        
         cd userspace/ksud/
         cargo ndk b -t ${{ inputs.target }} -r -Z build-std=std,core,panic_abort -Z build-std-features="optimize_for_size" -Z trim-paths
-      env:
-        ANDROID_NDK_HOME: ${{ steps.setup-ndk.outputs.ndk-path || env.ANDROID_NDK_HOME }}
 
     - name: Upload ksud artifact
       uses: actions/upload-artifact@v4
