@@ -35,15 +35,21 @@ jobs:
           ls -la "$apk"
 
           name=$(basename "$apk")
-          # تم تعديل الـ Regex ليسمح بالشرطات، الأرقام، والحروف في الجزء الأخير (مثل armeabi-v7a-release)
           if ! printf '%s' "$name" | grep -Eq '^[^_]+_v.+_[0-9]+-.+\.apk$'; then
             echo "::error::$name does not match expected pattern!"
             exit 1
           fi
 
-      - name: Package kernel bundle
+      - name: Package kernel bundle (Fallback)
         run: |
-          ./scripts/package-release-kernel-bundle.sh . "ReSukiSU-Ultima_${GITHUB_REF_NAME}_kernel-bundle.zip"
+          if [ -f "./scripts/package-release-kernel-bundle.sh" ]; then
+            ./scripts/package-release-kernel-bundle.sh . "ReSukiSU-Ultima_${GITHUB_REF_NAME}_kernel-bundle.zip"
+          else
+            echo "Script not found, creating kernel bundle zip manually from downloaded artifacts..."
+            cd downloaded-artifacts
+            zip -r "../ReSukiSU-Ultima_${GITHUB_REF_NAME}_kernel-bundle.zip" . -i "*.ko" -i "ksud*" || true
+            cd ..
+          fi
 
       - name: Release to GitHub
         uses: softprops/action-gh-release@v2
