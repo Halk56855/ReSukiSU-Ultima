@@ -58,6 +58,11 @@ jobs:
     - name: Setup cargo-ndk
       run: cargo install cargo-ndk --locked
 
+    - name: Clean previous build artifacts
+      run: |
+        cd userspace/ksud/
+        cargo clean
+
     - name: Build ksud
       run: |
         # Point ANDROID_NDK_HOME to the runner's preinstalled NDK root
