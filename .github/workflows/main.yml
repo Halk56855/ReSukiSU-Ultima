@@ -35,8 +35,9 @@ jobs:
           ls -la "$apk"
 
           name=$(basename "$apk")
-          if ! printf '%s' "$name" | grep -Eq '^[^_]+_v.+_[0-9]+-[a-z]+\.apk$'; then
-            echo "::error::$name does not match <app>_v<versionName>_<versionCode>-<buildType>.apk"
+          # تم تعديل الـ Regex ليسمح بالشرطات، الأرقام، والحروف في الجزء الأخير (مثل armeabi-v7a-release)
+          if ! printf '%s' "$name" | grep -Eq '^[^_]+_v.+_[0-9]+-.+\.apk$'; then
+            echo "::error::$name does not match expected pattern!"
             exit 1
           fi
 
